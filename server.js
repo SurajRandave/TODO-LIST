@@ -14,7 +14,7 @@ app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
 // MongoDB Connection
-mongoose.connect('mongodb://127.0.0.1:27017/todo-app', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/todo-app', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
