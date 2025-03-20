@@ -13,13 +13,40 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/todo-app', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch((err) => console.error('MongoDB connection error:', err));
+// MongoDB Connection with retry logic
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4
+    });
+    console.log('Connected to MongoDB');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    setTimeout(connectDB, 5000);
+  }
+};
+
+// Set strictQuery to false to prepare for Mongoose 7
+mongoose.set('strictQuery', false);
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    if (process.env.NODE_ENV !== 'production') {
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    }
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Connect to MongoDB
+startServer();
 
 // Todo Schema
 const todoSchema = new mongoose.Schema({
@@ -125,7 +152,8 @@ app.post('/todos/:id/edit', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}); 
+// For Vercel deployment
+const PORT = process.env.PORT || 3001;
+
+// Export the Express app for Vercel
+module.exports = app; 
